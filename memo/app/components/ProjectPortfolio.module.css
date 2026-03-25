@@ -1,0 +1,152 @@
+.list {
+  display: flex;
+  width: 100%;
+  max-width: 56rem;
+  flex-direction: column;
+  gap: 4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (min-width: 768px) {
+  .list {
+    gap: 5rem;
+  }
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.block {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.trigger {
+  display: flex;
+  width: 100%;
+  max-width: 15rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+}
+
+
+.coverRow {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.coverImage {
+  height: auto;
+  max-height: min(70vh, 900px);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  vertical-align: middle;
+  transition: opacity 0.2s ease;
+}
+
+.trigger:hover .coverImage {
+  opacity: 0.9;
+}
+
+.placeholder {
+  display: flex;
+  min-height: 12rem;
+  width: 100%;
+  max-width: 42rem;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-placeholder);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.meta {
+  text-align: center;
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+@media (prefers-color-scheme: dark) {
+  .meta {
+    color: #d4d4d8;
+  }
+}
+
+.hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted-2);
+}
+
+.panel {
+  margin-top: 2.5rem;
+  display: flex;
+  width: 100%;
+  max-width: 56rem;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gallery {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 640px) {
+  .gallery {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+.galleryCell {
+  display: flex;
+  justify-content: center;
+}
+
+.galleryImage {
+  height: auto;
+  max-height: min(85vh, 1200px);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.empty {
+  margin: 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.emptyGallery {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
