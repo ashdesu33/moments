@@ -77,13 +77,13 @@
   align-items: center;
   justify-content: center;
   background: var(--surface-placeholder);
-  font-size: 0.875rem;
+  font-size: 0.775rem;
   color: var(--muted);
 }
 
 .meta {
   text-align: center;
-  font-size: 0.875rem;
+  font-size: 0.775rem;
   letter-spacing: 0.02em;
   color: var(--muted);
 }
@@ -109,13 +109,50 @@
   max-width: 56rem;
   flex-direction: column;
   align-items: center;
+  mix-blend-mode: darken;
+}
+
+.panelOpening:not(.panelLeaving) {
+  animation: panelFadeIn 0.35s ease forwards;
+}
+
+.panelLeaving {
+  pointer-events: none;
+  animation: panelFadeOut 0.35s ease forwards;
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes panelFadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panelOpening:not(.panelLeaving),
+  .panelLeaving {
+    animation-duration: 0.01ms;
+  }
 }
 
 .gallery {
   display: grid;
   width: 100%;
   grid-template-columns: 1fr;
-  gap: 2rem;
+  gap: 0rem;
 }
 
 @media (min-width: 640px) {
@@ -127,6 +164,30 @@
 .galleryCell {
   display: flex;
   justify-content: center;
+  --gallery-stagger: 0;
+  opacity: 0;
+  animation: galleryFadeIn 0.55s ease forwards;
+  animation-delay: calc(var(--gallery-stagger) * 90ms);
+}
+
+@keyframes galleryFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .galleryCell {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .galleryImage {

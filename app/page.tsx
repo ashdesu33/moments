@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { ProjectPortfolio } from "@/app/components/ProjectPortfolio";
 import { client } from "@/sanity/lib/client";
 import { urlFor } from "@/sanity/lib/image";
@@ -10,10 +8,11 @@ import type { SanityImageSource } from "@sanity/image-url/lib/types/types";
 export const dynamic = "force-dynamic";
 
 /** Cover expands asset for dimensions + CDN fallback; `images` stays default refs (reliable for urlFor). */
-const PROJECTS_QUERY = `*[_type == "project"] | order(year desc, title asc) {
+const PROJECTS_QUERY = `*[_type == "project"] | order(orderRank asc, _createdAt desc) {
   _id,
   title,
   year,
+  expandedGalleryBackground,
   coverImage {
     _type,
     crop,
@@ -33,13 +32,53 @@ const PROJECTS_QUERY = `*[_type == "project"] | order(year desc, title asc) {
   images
 }`;
 
+const LAST_UPDATED_QUERY = `*[_type == "project"] | order(_updatedAt desc)[0]{ _updatedAt }`;
+
+type SanityColorValue = {
+  hex?: string;
+  alpha?: number;
+  rgb?: { r: number; g: number; b: number; a?: number };
+} | null;
+
 type RawProject = {
   _id: string;
   title: string | null;
   year: string | null;
+  expandedGalleryBackground: SanityColorValue;
   coverImage: SanityImageSource | null;
   images: SanityImageSource[] | null;
 };
+
+type LastUpdated = { _updatedAt: string } | null;
+
+function formatLastUpdated(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}.${m}.${day}`;
+}
+
+function expandedGalleryBackgroundCss(color: SanityColorValue): string | undefined {
+  if (!color?.hex) return undefined;
+  const alpha = color.alpha ?? color.rgb?.a ?? 1;
+  if (typeof color.rgb?.r === "number" && typeof color.rgb?.g === "number" && typeof color.rgb?.b === "number") {
+    if (alpha < 1) {
+      return `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${alpha})`;
+    }
+  }
+  if (alpha < 1 && /^#([0-9a-f]{6})$/i.test(color.hex)) {
+    const n = parseInt(color.hex.slice(1), 16);
+    const r = (n >> 16) & 255;
+    const g = (n >> 8) & 255;
+    const b = n & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return color.hex;
+}
 
 function assetRef(source: SanityImageSource | null | undefined): string | null {
   if (!source || typeof source !== "object" || !("asset" in source)) {
@@ -126,11 +165,20 @@ function buildGallery(
 }
 
 export default async function Home() {
-  const rows = await client.fetch<RawProject[]>(
-    PROJECTS_QUERY,
-    {},
-    { next: { revalidate: 0 } },
-  );
+  const [rows, lastUpdated] = await Promise.all([
+    client.fetch<RawProject[]>(
+      PROJECTS_QUERY,
+      {},
+      { next: { revalidate: 0 } },
+    ),
+    client.fetch<LastUpdated>(
+      LAST_UPDATED_QUERY,
+      {},
+      { next: { revalidate: 0 } },
+    ),
+  ]);
+
+  const lastUpdatedLabel = formatLastUpdated(lastUpdated?._updatedAt);
 
   const projects = rows.map((row) => {
     const title = row.title ?? null;
@@ -144,6 +192,7 @@ export default async function Home() {
       id: row._id,
       title,
       year: row.year ?? null,
+      expandedGalleryBackground: expandedGalleryBackgroundCss(row.expandedGalleryBackground),
       cover:
         coverUrl !== null
           ? {
@@ -164,10 +213,18 @@ export default async function Home() {
     <div className="page">
       <header className="site-header">
         <p className="site-title">Memo</p>
+        <p className="site-title">
+          <a href="https://www.ashdesu.info" style={{color:"gray"}} target="_blank" rel="noopener noreferrer">from ash</a>
+        </p>
       </header>
       <main className="site-main">
         <ProjectPortfolio projects={projects} />
       </main>
+      <footer className="site-footer">
+        <span className="last-updated">
+          Last updated: {lastUpdatedLabel ?? "—"}
+        </span>
+      </footer>
     </div>
   );
 }
