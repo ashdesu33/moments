@@ -21,6 +21,7 @@ export type SizedImage = {
 
 export type ProjectItem = {
   id: string;
+  anchor: string;
   title: string | null;
   year: string | null;
   expandedGalleryBackground?: string;
@@ -62,8 +63,11 @@ function pickProjectNearestViewportCenter(
 
 export function ProjectPortfolio({ projects }: ProjectPortfolioProps) {
   const baseId = useId();
-  const [expandedIds, setExpandedIds] = useState<string[]>([]);
+  const [expandedIds, setExpandedIds] = useState<string[]>(() =>
+    projects.map((project) => project.id),
+  );
   const [closingIds, setClosingIds] = useState<string[]>([]);
+  const [animatedId, setAnimatedId] = useState<string | null>(null);
   const [viewportBgProjectId, setViewportBgProjectId] = useState<string | null>(null);
   const closeTimersRef = useRef<Map<string, number>>(new Map());
   const itemRefs = useRef<Map<string, HTMLLIElement>>(new Map());
@@ -88,6 +92,52 @@ export function ProjectPortfolio({ projects }: ProjectPortfolioProps) {
   useLayoutEffect(() => {
     updateViewportBg();
   }, [openIdsKey, updateViewportBg]);
+
+  useLayoutEffect(() => {
+    const header = document.querySelector<HTMLElement>(".site-header");
+    if (!header) return;
+
+    const apply = () => {
+      document.documentElement.style.setProperty(
+        "--header-offset",
+        `${header.offsetHeight}px`,
+      );
+    };
+
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(header);
+    return () => {
+      ro.disconnect();
+      document.documentElement.style.removeProperty("--header-offset");
+    };
+  }, []);
+
+  useEffect(() => {
+    const openFromHash = () => {
+      const hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+      if (!hash) return;
+      const project = projects.find((item) => item.anchor === hash);
+      if (!project) return;
+
+      const pending = closeTimersRef.current.get(project.id);
+      if (pending !== undefined) {
+        clearTimeout(pending);
+        closeTimersRef.current.delete(project.id);
+      }
+
+      setClosingIds((current) =>
+        current.includes(project.id) ? current.filter((id) => id !== project.id) : current,
+      );
+      setExpandedIds((current) =>
+        current.includes(project.id) ? current : [...current, project.id],
+      );
+    };
+
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, [projects]);
 
   useEffect(() => {
     window.addEventListener("scroll", updateViewportBg, { passive: true });
@@ -134,6 +184,8 @@ export function ProjectPortfolio({ projects }: ProjectPortfolioProps) {
     (id: string) => {
       if (closingIds.includes(id)) return;
 
+      setAnimatedId(id);
+
       if (expandedIds.includes(id)) {
         setClosingIds((c) => (c.includes(id) ? c : [...c, id]));
         scheduleRemoveAfterClose(id);
@@ -158,11 +210,7 @@ export function ProjectPortfolio({ projects }: ProjectPortfolioProps) {
       ? projects.find((p) => p.id === viewportBgProjectId)?.expandedGalleryBackground
       : undefined;
 
-    if (bg) {
-      pageEl.style.backgroundColor = bg;
-    } else {
-      pageEl.style.backgroundColor = "";
-    }
+    pageEl.style.backgroundColor = bg || "";
 
     return () => {
       pageEl.style.backgroundColor = "";
@@ -180,11 +228,17 @@ export function ProjectPortfolio({ projects }: ProjectPortfolioProps) {
           expandedIds.includes(project.id) || closingIds.includes(project.id);
         const isLeaving = closingIds.includes(project.id);
         const expanded = showPanel;
+        const animate = animatedId === project.id;
         const panelId = `${baseId}-${project.id}-panel`;
         const buttonId = `${baseId}-${project.id}-trigger`;
 
         return (
-          <li key={project.id} ref={(node) => setItemRef(project.id, node)} className={styles.item}>
+          <li
+            id={project.anchor}
+            key={project.id}
+            ref={(node) => setItemRef(project.id, node)}
+            className={styles.item}
+          >
             <div className={styles.block}>
               <button
                 id={buttonId}
@@ -203,7 +257,7 @@ export function ProjectPortfolio({ projects }: ProjectPortfolioProps) {
                       height={project.cover.height}
                       className={styles.coverImage}
                       sizes="(max-width: 768px) 100vw, 48rem"
-                      priority={index === 0}
+                      {...(index === 0 ? { priority: true } : { loading: "lazy" as const })}
                     />
                   ) : (
                     <div className={styles.placeholder}>No cover image</div>
@@ -222,7 +276,9 @@ export function ProjectPortfolio({ projects }: ProjectPortfolioProps) {
               role="region"
               aria-labelledby={buttonId}
               hidden={!showPanel}
-              className={`${styles.panel} ${isLeaving ? styles.panelLeaving : styles.panelOpening}`}
+              className={`${styles.panel} ${
+                isLeaving ? styles.panelLeaving : animate ? styles.panelOpening : ""
+              }`}
             >
               {showPanel &&
                 (project.gallery.length > 0 ? (
@@ -230,7 +286,7 @@ export function ProjectPortfolio({ projects }: ProjectPortfolioProps) {
                     {project.gallery.map((img, i) => (
                       <div
                         key={`${project.id}-${i}`}
-                        className={styles.galleryCell}
+                        className={`${styles.galleryCell} ${animate ? "" : styles.galleryCellStatic}`}
                         style={{ ["--gallery-stagger" as string]: String(i) }}
                       >
                         <Image
@@ -240,6 +296,7 @@ export function ProjectPortfolio({ projects }: ProjectPortfolioProps) {
                           height={img.height}
                           className={styles.galleryImage}
                           sizes="(max-width: 640px) 100vw, 50vw"
+                          loading="lazy"
                         />
                       </div>
                     ))}

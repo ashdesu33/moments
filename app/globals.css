@@ -50,6 +50,12 @@ html {
   height: 100%;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   margin: 0;
   min-height: 100%;
@@ -72,14 +78,95 @@ body {
   transition: background-color 0.4s ease;
 }
 
+.site-header-blur {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  width: 100%;
+  height: calc(var(--header-offset, 6.75rem) - 0.85rem + 5px);
+  margin-bottom: calc((var(--header-offset, 6.75rem) - 0.85rem + 5px) * -1);
+  pointer-events: none;
+}
+
+.site-header-blur-fill {
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(22px);
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    rgba(0, 0, 0, 0.08) 50%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    rgba(0, 0, 0, 0.08) 50%,
+    transparent 100%
+  );
+}
+
 .site-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.7rem;
+  width: 100%;
+  padding: var(--space-header-y) var(--space-header-x) 0.85rem;
+  position: sticky;
+  top: 0;
+  z-index: 41;
+  background: transparent;
+  mix-blend-mode: difference;
+  color: #fff;
+}
+
+.site-header a {
+  color: inherit;
+}
+
+.site-title-row {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  width: 100vw;
-  padding: var(--space-header-y) var(--space-header-x);
-  position: fixed;
+}
+
+.project-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  max-width: 42rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-nav li {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.5;
+}
+
+.project-nav li:not(:last-child)::after {
+  content: "·";
+  margin: 0 0.55rem;
+  color: currentColor;
+}
+
+.project-nav-link {
+  font-size: 0.775rem;
+  letter-spacing: 0.02em;
+  color: inherit;
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+.project-nav-link:hover,
+.project-nav-link:focus-visible {
+  text-decoration: underline;
 }
 
 .site-title {
@@ -100,7 +187,7 @@ body {
 }
 
 .site-main {
-  margin: 15vh auto;
+  margin: 3rem auto 15vh;
   width: 100%;
   max-width: var(--max-content);
   display: flex;

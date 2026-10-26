@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 const PROJECTS_QUERY = `*[_type == "project"] | order(orderRank asc, _createdAt desc) {
   _id,
   title,
+  slug,
   year,
   expandedGalleryBackground,
   coverImage {
@@ -43,6 +44,7 @@ type SanityColorValue = {
 type RawProject = {
   _id: string;
   title: string | null;
+  slug: { current?: string | null } | null;
   year: string | null;
   expandedGalleryBackground: SanityColorValue;
   coverImage: SanityImageSource | null;
@@ -60,6 +62,33 @@ function formatLastUpdated(value: string | null | undefined): string | null {
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
   const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}.${m}.${day}`;
+}
+
+function toAnchor(value: string): string {
+  const cleaned = value
+    .trim()
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!cleaned) return "";
+  return /^[a-z]/.test(cleaned) ? cleaned : `project-${cleaned}`;
+}
+
+function uniqueAnchor(
+  title: string | null,
+  slug: string | null | undefined,
+  index: number,
+  used: Set<string>,
+): string {
+  const base = toAnchor(slug ?? "") || toAnchor(title ?? "") || `project-${index + 1}`;
+  let anchor = base;
+  let n = 2;
+  while (used.has(anchor)) {
+    anchor = `${base}-${n++}`;
+  }
+  used.add(anchor);
+  return anchor;
 }
 
 function expandedGalleryBackgroundCss(color: SanityColorValue): string | undefined {
@@ -180,7 +209,8 @@ export default async function Home() {
 
   const lastUpdatedLabel = formatLastUpdated(lastUpdated?._updatedAt);
 
-  const projects = rows.map((row) => {
+  const usedAnchors = new Set<string>();
+  const projects = rows.map((row, index) => {
     const title = row.title ?? null;
     const coverAlt = title ? `${title} — cover` : "Project cover";
     const gallery = buildGallery(row.coverImage, row.images);
@@ -190,6 +220,7 @@ export default async function Home() {
 
     return {
       id: row._id,
+      anchor: uniqueAnchor(title, row.slug?.current, index, usedAnchors),
       title,
       year: row.year ?? null,
       expandedGalleryBackground: expandedGalleryBackgroundCss(row.expandedGalleryBackground),
@@ -211,11 +242,29 @@ export default async function Home() {
 
   return (
     <div className="page">
+      <div className="site-header-blur" aria-hidden="true">
+        <div className="site-header-blur-fill" />
+      </div>
       <header className="site-header">
-        <p className="site-title">Memo</p>
-        <p className="site-title">
-          <a href="https://www.ashdesu.info" style={{color:"gray"}} target="_blank" rel="noopener noreferrer">from ash</a>
-        </p>
+        <div className="site-title-row">
+          <p className="site-title">Memo</p>
+          <p className="site-title">
+            <a href="https://www.ashdesu.info" target="_blank" rel="noopener noreferrer">from ash</a>
+          </p>
+        </div>
+        {projects.length > 0 ? (
+          <nav aria-label="Projects">
+            <ul className="project-nav">
+              {projects.map((project) => (
+                <li key={project.id}>
+                  <a href={`#${project.anchor}`} className="project-nav-link">
+                    {project.title ?? "Untitled"}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ) : null}
       </header>
       <main className="site-main">
         <ProjectPortfolio projects={projects} />
